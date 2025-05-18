@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Блочная хронология «Война и мир»</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fafafa; margin: 20px; }
+    h1 { text-align: center; margin-bottom: 10px; }
+    .wrap { overflow-x: auto; padding-bottom: 10px; }
+    .person { font: bold 16px sans-serif; fill: #202020; }
+    .tblock { stroke: #757575; stroke-width: 2; }
+    .event  { font: bold 12px sans-serif; fill: #202020; }
+    .time   { font: bold 15px sans-serif; fill: #222; }
+    .link   { stroke: #f44336; stroke-width: 2.5; fill: none; opacity: .85; }
+  </style>
+</head>
+<body>
+  <h1>Схема судеб героев «Война и мир»</h1>
+  <div class="wrap">
+    <svg id="schema" width="3600" height="1330"></svg>
+  </div>
+
+  <!-- Подключаем D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    // Ширина/высота блоков и отступы
+    const blockW = 200, blockH = 54, timeGap = 255, persGap = 80;
+    // Оси времени
+    const TIME = [
+      {code:"1805", disp:"1805"},
+      {code:"1807", disp:"1806–07"},
+      {code:"1811", disp:"1810–12"},
+      {code:"1812", disp:"Лето–осень 1812"},
+      {code:"konec", disp:"Конец 1812"},
+      {code:"epilog", disp:"1813–1820"}
+    ];
+    // Персонажи
+    const PEOPLE = [
+      {id:"pierre",    name:"Пьер Безухов",     color:"#ffe600"},
+      {id:"andrei",    name:"Андрей Болконский", color:"#8e24aa"},
+      {id:"natasha",   name:"Наташа Ростова",   color:"#00bcd4"},
+      {id:"nikolai",   name:"Николай Ростов",   color:"#43a047"},
+      {id:"marya",     name:"Марья Болконская", color:"#ffb300"},
+      {id:"sonya",     name:"Соня Ростова",     color:"#fb8c00"},
+      {id:"petya",     name:"Петя Ростов",      color:"#c62828"},
+      {id:"ilya",      name:"Илья Ростов",      color:"#9e9d24"},
+      {id:"helen",     name:"Элен Курагина",    color:"#e53935"},
+      {id:"anatol",    name:"Анатоль Курагин",  color:"#00c853"},
+      {id:"kutuzov",   name:"Кутузов",          color:"#3949ab"},
+      {id:"napoleon",  name:"Наполеон",         color:"#d84315"},
+      {id:"tushin",    name:"Тушин",            color:"#00897b"},
+      {id:"ahrosimova",name:"Ахросимова",       color:"#fdd835"},
+      {id:"karataev",  name:"Платон Каратаев",  color:"#00acc1"}
+    ];
+    // События персонажей
+    const BOOK = {
+      "pierre-1805":"Возвращение. Наследство. Женитьба на Элен.",
+      "andrei-1805":"Уход на войну. Аустерлиц.",
+      "natasha-1805":"Детство. Первый бал.",
+      "nikolai-1805":"Поступает в армию. Битва.",
+      "marya-1805":"Лысые Горы. Покорность отцу.",
+      "sonya-1805":"Любит Николая.",
+      "petya-1805":"Детство.",
+      "ilya-1805":"Дом. Весёлое хозяйство.",
+      "helen-1805":"Свет. Женитьба на Пьере.",
+      "anatol-1805":"Кутежи и дуэли.",
+      "kutuzov-1805":"Шенграбен, Аустерлиц.",
+      "napoleon-1805":"Победа при Аустерлице.",
+      "tushin-1805":"Подвиг артиллериста.",
+      "ahrosimova-1805":"Поддержка семьи.",
+
+      "pierre-1807":"Дуэль с Долоховым. Масонство.",
+      "andrei-1807":"Смерть Лизы. Депрессия.",
+      "natasha-1807":"Бал, взросление.",
+      "nikolai-1807":"Семейные трудности.",
+      "marya-1807":"Религия и забота.",
+      "sonya-1807":"Надежда на Николая.",
+      "petya-1807":"Мечты о подвиге.",
+      "ilya-1807":"Финансовый кризис.",
+      "helen-1807":"Светские сплетни.",
+      "anatol-1807":"Сват, интриги.",
+      "kutuzov-1807":"В отставке.",
+      "napoleon-1807":"Тильзитский мир.",
+      "tushin-1807":"Служба в артиллерии.",
+      "ahrosimova-1807":"Забота о гостях.",
+
+      "pierre-1811":"Эксперименты с реформами.",
+      "andrei-1811":"Любовь к Наташе.",
+      "natasha-1811":"Прием предложения.",
+      "nikolai-1811":"Охота. Долги.",
+      "marya-1811":"Болезнь отца.",
+      "sonya-1811":"Жертва ради семьи.",
+      "petya-1811":"Желание на фронт.",
+      "ilya-1811":"Кризис хозяина.",
+      "helen-1811":"Интриги света.",
+      "anatol-1811":"Покушение на Наташу.",
+
+      "pierre-1812":"Бородино. Плен.",
+      "andrei-1812":"Бородино. Ранение.",
+      "natasha-1812":"Кризис, помощь раненым.",
+      "nikolai-1812":"Сражения. Смерть Пети.",
+      "marya-1812":"Смерть отца. Бунт.",
+      "sonya-1812":"Поддержка Ростовых.",
+      "petya-1812":"Партизаны. Гибель.",
+      "ilya-1812":"Разорение.",
+      "helen-1812":"Смерть Элен.",
+      "anatol-1812":"Ранение, ампутация.",
+      "kutuzov-1812":"Главком. Стратегия.",
+      "napoleon-1812":"Захват Москвы, пожар.",
+      "tushin-1812":"Бородино. Батарея.",
+      "ahrosimova-1812":"Разоблачение Курагина.",
+      "karataev-1812":"Плен, мудрость, гибель.",
+
+      "pierre-konec":"Плен, встреча с Каратаевым.",
+      "andrei-konec":"Смерть от ран.",
+      "natasha-konec":"Потери и взросление.",
+      "nikolai-konec":"Глава семьи.",
+      "marya-konec":"Опека племянника.",
+      "sonya-konec":"В доме Ростовых.",
+      "ilya-konec":"Умирает.",
+
+      "pierre-epilog":"Семья с Наташей.",
+      "andrei-epilog":"Память о герое.",
+      "natasha-epilog":"Счастье в браке.",
+      "nikolai-epilog":"Жена Марья.",
+      "marya-epilog":"Тётя Николеньки.",
+      "sonya-epilog":"Верность семье.",
+      "petya-epilog":"(Погибший герой)",
+      "ilya-epilog":"(В памяти семьи)",
+      "kutuzov-epilog":"(Память о командире)",
+      "napoleon-epilog":"(Поражение и ссылка)",
+      "tushin-epilog":"(В памяти армии)"
+    };
+
+    // Пересечения событий
+    const LINES = [
+      ["andrei","1811","natasha","1811"],
+      ["andrei","1812","natasha","1812"],
+      ["andrei","konec","natasha","konec"],
+      ["andrei","1807","marya","1807"],
+      ["pierre","1812","andrei","1812"],
+      ["pierre","1812","kutuzov","1812"],
+      ["andrei","1812","kutuzov","1812"],
+      ["pierre","1812","napoleon","1812"],
+      ["andrei","1812","napoleon","1812"],
+      ["pierre","konec","karataev","1812"],
+      ["nikolai","epilog","marya","epilog"],
+      ["pierre","epilog","natasha","epilog"]
+    ];
+
+    // Функции координат
+    const tX = t => 140 + TIME.findIndex(x=>x.code===t)*timeGap;
+    const pY = p => 60 + PEOPLE.findIndex(x=>x.id===p)*persGap;
+
+    // Отрисовка
+    const svg = d3.select('#schema');
+    // Ось времени
+    TIME.forEach(t=>{
+      svg.append("text").attr("class","time")
+        .attr("x",tX(t.code)+blockW/2).attr("y",34)
+        .text(t.disp);
+      svg.append("line")
+        .attr("x1",tX(t.code)+blockW/2).attr("y1",55)
+        .attr("x2",tX(t.code)+blockW/2).attr("y2",60+PEOPLE.length*persGap)
+        .attr("stroke","#e0e0e0");
+    });
+    // Имена персонажей
+    PEOPLE.forEach(p=>{
+      svg.append("text").attr("class","person")
+        .attr("x",10).attr("y",pY(p.id)+blockH/2+8)
+        .text(p.name);
+    });
+    // Блоки событий
+    const EXIST={};
+    PEOPLE.forEach(p=>{
+      TIME.forEach(t=>{
+        const key = p.id+'-'+t.code, txt = BOOK[key];
+        if(!txt) return;
+        EXIST[key]=1;
+        // Прямоугольник
+        svg.append("rect")
+          .attr("x",tX(t.code)).attr("y",pY(p.id))
+          .attr("width",blockW).attr("height",blockH)
+          .attr("fill",p.color).attr("rx",14).attr("class","tblock");
+        // Текст внутри (разбив на 2 строки при необходимости)
+        let lines = txt.length>36
+          ? [txt.slice(0,txt.lastIndexOf(" ",36)), txt.slice(txt.lastIndexOf(" ",36)+1)]
+          : [txt];
+        lines.forEach((l,i)=>{
+          svg.append("text").attr("class","event")
+            .attr("x",tX(t.code)+blockW/2)
+            .attr("y",pY(p.id)+24+16*i)
+            .attr("text-anchor","middle")
+            .text(l);
+        });
+      });
+    });
+    // Линии-пересечения
+    LINES.forEach(([p1,t1,p2,t2])=>{
+      if(!EXIST[p1+'-'+t1]||!EXIST[p2+'-'+t2]) return;
+      const x1 = tX(t1)+blockW, y1 = pY(p1)+blockH/2;
+      const x2 = tX(t2),      y2 = pY(p2)+blockH/2;
+      svg.append("path").attr("class","link")
+        .attr("d",`M${x1},${y1} C${x1+40},${y1} ${x2-40},${y2} ${x2},${y2}`);
+    });
+  </script>
+</body>
+</html>
